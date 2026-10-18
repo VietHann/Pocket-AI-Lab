@@ -1,0 +1,15 @@
+# Xcode
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+build/
+*.ipa
+.DS_Store
+*.xcuserstate
+*.xcuserdata
+.swiftpm/
+*.resolved
+# Downloaded model weights never belong in Git
+*.gguf
+*.onnx
+*.mlmodelc

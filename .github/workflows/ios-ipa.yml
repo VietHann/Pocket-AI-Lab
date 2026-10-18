@@ -1,0 +1,54 @@
+name: Build iPhone IPA
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unsigned-ipa:
+    name: iPhone 11+ — iOS 17 — IPA
+    runs-on: macos-15
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate pastel app icon
+        run: swift scripts/generate_icon.swift
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build iOS device app (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project PocketAILab.xcodeproj \
+            -scheme PocketAILab \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build.log
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/PocketAILab.app" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          /usr/bin/zip -qr "$GITHUB_WORKSPACE/Pocket-AI-Lab-unsigned.ipa" Payload
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pocket-AI-Lab-iPhone11plus-unsigned-IPA
+          path: Pocket-AI-Lab-unsigned.ipa
+          retention-days: 14
+      - name: Upload build log if failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pocket-AI-Lab-build-log
+          path: build.log
+          if-no-files-found: ignore
